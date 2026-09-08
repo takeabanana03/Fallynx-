@@ -71,6 +71,7 @@ export default function SettingsScreen({ navigation }) {
           <Button title="Battery optimisation" ghost onPress={Perms.openBatterySettings} />
           <Button title="Android app settings" ghost onPress={Perms.openSettings} />
           <Button title="Run setup again" ghost onPress={reset} />
+          
         </Card>
       </ScrollView>
     </SafeAreaView>

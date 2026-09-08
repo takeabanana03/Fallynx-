@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -66,26 +66,26 @@ function Tabs() {
 }
 
 export default function RootNavigator() {
-  const [onboarded, setOnboarded] = useState(null); // null while loading
+  const [onboarded, setOnboarded] = useState(null);
 
   useEffect(() => {
     Perms.hasOnboarded().then(setOnboarded);
   }, []);
 
-  // Any trigger - fall, shake, panic button - opens the countdown. The bus
-  // debounces, so two sources firing together still give one alert.
   useEffect(() => subscribe((event) => navigate('Countdown', { event })), []);
 
   if (onboarded === null) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.ink, justifyContent: 'center' }}>
+      <View style={styles.loading}>
         <ActivityIndicator color={colors.safe} />
       </View>
     );
   }
 
   if (!onboarded) {
-    return <OnboardingScreen onDone={() => Perms.setOnboarded().then(() => setOnboarded(true))} />;
+    return (
+      <OnboardingScreen onDone={() => Perms.setOnboarded().then(() => setOnboarded(true))} />
+    );
   }
 
   return (
@@ -100,8 +100,6 @@ export default function RootNavigator() {
         <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
         <Stack.Screen name="Medical ID" component={MedicalIdScreen} />
         <Stack.Screen name="History" component={HistoryScreen} />
-        {/* Full screen so the countdown covers the tab bar. Gestures off so
-            it cannot be swiped away by accident. */}
         <Stack.Screen
           name="Countdown"
           component={CountdownScreen}
@@ -111,3 +109,7 @@ export default function RootNavigator() {
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: { flex: 1, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+});
