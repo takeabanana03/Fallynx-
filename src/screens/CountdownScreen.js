@@ -32,6 +32,10 @@ export default function CountdownScreen({ navigation, route }) {
     return () => sub.remove();
   }, []);
 
+  // However this screen closes (cancel, Done, or after sending), start the
+  // detector fresh so the next fall can be caught.
+  useEffect(() => () => resetDetector(), []);
+
   useEffect(() => {
     if (sending) return;
     if (left <= 0) {

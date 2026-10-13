@@ -25,6 +25,7 @@ let result = { state: STATE.IDLE, reason: null };
 
 export function start() {
   if (subs.length) return;
+  resetDetector(); // always arm from a clean state
 
   Accelerometer.setUpdateInterval(1000 / SENSORS.ACCEL_HZ);
   Gyroscope.setUpdateInterval(1000 / SENSORS.GYRO_HZ);

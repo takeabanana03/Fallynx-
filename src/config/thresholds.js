@@ -9,13 +9,13 @@ export const SENSORS = {
 };
 
 export const DETECTION = {
-  FREE_FALL_G: 0.5,
-  FREE_FALL_MIN_MS: 100,
+  FREE_FALL_G: 0.7,
+  FREE_FALL_MIN_MS: 40,
   FREE_FALL_MAX_MS: 400,
-  IMPACT_G: 2.5,
+  IMPACT_G: 1.5,
   IMPACT_WINDOW_MS: 500,
-  TILT_DEGREES: 60,
-  INACTIVITY_MS: 3000,
+  TILT_DEGREES: 5,
+  INACTIVITY_MS: 500,
   // Variance of acceleration magnitude, in g squared. Measured separation is
   // wide: lying still is around 0.0001, walking around 0.1. Tune against your
   // own recordings before trusting it.
