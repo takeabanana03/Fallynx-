@@ -34,7 +34,7 @@ export const TRIGGERS = {
 };
 
 export const ALERT = {
-  COUNTDOWN_S: 30,
+  COUNTDOWN_S: 10,
   GPS_TIMEOUT_MS: 10000,
   MAX_CONTACTS: 5,
 };

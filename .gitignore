@@ -21,3 +21,5 @@ recordings/
 !recordings/*.csvs
 
 .claude/
+
+src/config/emergency.js
