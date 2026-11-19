@@ -15,9 +15,10 @@ const OPENING = {
 // SMS is charged per 160 characters, so this stays tight and puts the
 // location first. A contact reading it on a lock screen should get the
 // link without opening anything.
-export function alertSms({ name, source, location, battery }) {
+export function alertSms({ name, source, location, battery, destination }) {
   const who = name || 'A Fallynx user';
   const lines = [`${who} ${OPENING[source] || 'needs help'}.`];
+  if (destination) lines.push(`Was walking to ${destination}.`);
 
   if (location) {
     lines.push(mapsLink(location.latitude, location.longitude));

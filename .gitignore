@@ -19,3 +19,5 @@ recordings/
 *.csv
 recordings/
 !recordings/*.csvs
+
+.claude/

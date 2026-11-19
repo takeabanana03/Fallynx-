@@ -1,49 +1,112 @@
 import { File, Directory, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { magnitude } from '../../utils/math';
+import { RECORDING } from '../../config/thresholds';
 
 // Records raw samples to a CSV so Phase 3 can tune thresholds against real
-// data instead of guesses. Rows are held in memory and written once on stop:
-// three minutes at 50 Hz is about 9000 rows, which is nothing.
+// data instead of guesses. Every row is a real reading straight from the
+// phone's sensors; nothing here makes data up.
+//
+// Two ways to record:
+//   start(label)            records everything until stop() (normal activity)
+//   startOnMovement(label)  waits until the phone really moves, keeps the
+//                           second before it, records RECORDING.AFTER_MS more,
+//                           then saves on its own (falls)
 
 export const HEADER = 't,ax,ay,az,gx,gy,gz,pressure,label';
 
 const FOLDER = 'recordings';
 
-let rows = [];
-let label = null;
-let startedAt = 0;
+let label = null;     // set while recording or waiting
+let waiting = false;  // true until real movement starts the recording
+let auto = false;     // true when the recording stops and saves on its own
+let samples = [];     // { a, g, pressure } raw readings, turned into rows on save
+let before = [];      // rolling last second while waiting
+let triggeredAt = 0;
+let onSaved = null;
 
 export function isRecording() {
   return label !== null;
 }
 
+export function isWaiting() {
+  return waiting;
+}
+
 export function start(newLabel) {
-  rows = [];
+  reset();
   label = newLabel;
-  startedAt = Date.now();
+}
+
+// onDone(saved) runs after the automatic save.
+export function startOnMovement(newLabel, onDone) {
+  reset();
+  label = newLabel;
+  waiting = true;
+  auto = true;
+  onSaved = onDone;
 }
 
 export function add(a, g, pressure) {
   if (!isRecording()) return;
-  // Time relative to the start of the recording, so files are comparable.
-  const t = a.t - startedAt;
-  rows.push(
+  const sample = { a, g, pressure };
+
+  if (waiting) {
+    // Tiny wobble of a still phone stays below TRIGGER_G and is ignored.
+    before.push(sample);
+    before = before.filter((s) => a.t - s.a.t <= RECORDING.BEFORE_MS);
+    if (Math.abs(magnitude(a) - 1) > RECORDING.TRIGGER_G) {
+      waiting = false;
+      triggeredAt = a.t;
+      samples = before;
+      before = [];
+    }
+    return;
+  }
+
+  samples.push(sample);
+
+  if (auto && a.t - triggeredAt >= RECORDING.AFTER_MS) {
+    const done = onSaved;
+    stop().then((saved) => done && done(saved));
+  }
+}
+
+export function count() {
+  return samples.length;
+}
+
+// Lowest and highest acceleration so far, in g. A real fall shows a low
+// value (the drop) and a high one (the landing).
+export function range() {
+  if (!samples.length) return null;
+  let min = Infinity;
+  let max = 0;
+  samples.forEach((s) => {
+    const m = magnitude(s.a);
+    if (m < min) min = m;
+    if (m > max) max = m;
+  });
+  return { min, max };
+}
+
+export async function stop() {
+  if (!isRecording() || !samples.length) {
+    reset();
+    return null;
+  }
+
+  // Time relative to the first kept sample, so files are comparable.
+  const startedAt = samples[0].a.t;
+  const rows = samples.map(({ a, g, pressure }) =>
     [
-      t,
+      a.t - startedAt,
       round(a.x), round(a.y), round(a.z),
       round(g?.x), round(g?.y), round(g?.z),
       round(pressure, 2),
       label,
     ].join(',')
   );
-}
-
-export function count() {
-  return rows.length;
-}
-
-export async function stop() {
-  if (!isRecording()) return null;
 
   const dir = new Directory(Paths.document, FOLDER);
   if (!dir.exists) dir.create({ intermediates: true });
@@ -52,10 +115,24 @@ export async function stop() {
   file.create({ overwrite: true });
   file.write([HEADER, ...rows].join('\n'));
 
-  const saved = { name: file.name, uri: file.uri, rows: rows.length };
-  rows = [];
-  label = null;
+  const saved = { name: file.name, uri: file.uri, rows: rows.length, ...range() };
+  reset();
   return saved;
+}
+
+// Stop without saving.
+export function cancel() {
+  reset();
+}
+
+function reset() {
+  label = null;
+  waiting = false;
+  auto = false;
+  samples = [];
+  before = [];
+  triggeredAt = 0;
+  onSaved = null;
 }
 
 export function list() {

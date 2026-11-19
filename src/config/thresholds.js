@@ -45,3 +45,10 @@ export const SENSITIVITY_PRESETS = {
   medium: { IMPACT_G: 2.5, INACTIVITY_MS: 3000 },
   high: { IMPACT_G: 2.0, INACTIVITY_MS: 2000 },
 };
+
+// "Record a fall" waits for real movement instead of recording a still phone.
+export const RECORDING = {
+  TRIGGER_G: 1.1,   // start when acceleration moves this far from resting 1 g
+  BEFORE_MS: 1000,  // keep this much from just before the movement
+  AFTER_MS: 6000,   // then record this long (fall + landing + lying still)
+};

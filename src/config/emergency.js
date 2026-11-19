@@ -17,3 +17,15 @@ export const TEST_NUMBER = '+23057549312';
 export function dialTarget() {
   return TEST_MODE ? TEST_NUMBER : PRIMARY_EMERGENCY;
 }
+
+// --- Twilio (for a phone with no SIM card) --------------------------------
+// false: alerts go out through Twilio over Wi-Fi (firebase/functions).
+// true:  the phone makes the call itself and needs a SIM card.
+export const USE_SIM = false;
+
+// Printed by `firebase deploy`. If it prints a different address, paste it here.
+export const ALERT_URL = 'https://us-central1-fallynx-318cd.cloudfunctions.net/sendAlert';
+
+// Must be exactly the same text as ALERT_KEY in firebase/functions/.env
+export const ALERT_KEY = 'fallynx-demo-8f3k2m9q';
+// ---------------------------------------------------------------------------

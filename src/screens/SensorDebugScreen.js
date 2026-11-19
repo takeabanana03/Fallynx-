@@ -8,6 +8,7 @@ import * as csv from '../services/sensors/csvLogger';
 import { parseRecording, evaluate } from '../services/detection/replay';
 import { LABELS, STATE } from '../services/detection/states';
 import { magnitude } from '../utils/math';
+import { RECORDING } from '../config/thresholds';
 
 const BARS = 50;
 const MAX_G = 4; // chart ceiling
@@ -18,6 +19,8 @@ export default function SensorDebugScreen() {
   const [chart, setChart] = useState([]);
   const [recording, setRecording] = useState(false);
   const [rows, setRows] = useState(0);
+  const [waiting, setWaiting] = useState(false);
+  const [range, setRange] = useState(null);
   const [files, setFiles] = useState([]);
   const [detected, setDetected] = useState({ state: STATE.IDLE, reason: null });
   const [score, setScore] = useState(null);
@@ -30,6 +33,8 @@ export default function SensorDebugScreen() {
       setData(sensors.snapshot());
       setChart(sensors.recent(BARS).map(magnitude));
       setRows(csv.count());
+      setWaiting(csv.isWaiting());
+      setRange(csv.range());
       setDetected(sensors.detection());
     }, 100);
     return () => clearInterval(id);
@@ -56,8 +61,35 @@ export default function SensorDebugScreen() {
   function startRecording(label) {
     if (!running) sensors.start();
     setRunning(true);
-    csv.start(label);
+    setRows(0);
+    setRange(null);
+    if (label === 'fall') {
+      // Waits for real movement, then saves by itself (see csvLogger).
+      csv.startOnMovement('fall', showSaved);
+      setWaiting(true);
+    } else {
+      csv.start(label);
+      setWaiting(false);
+    }
     setRecording(true);
+  }
+
+  function cancelRecording() {
+    csv.cancel();
+    setRecording(false);
+    setWaiting(false);
+  }
+
+  function showSaved(saved) {
+    setRecording(false);
+    setWaiting(false);
+    setFiles(csv.list());
+    if (saved) {
+      Alert.alert(
+        'Saved',
+        `${saved.name}\n${saved.rows} real samples\nlowest ${saved.min.toFixed(2)} g, highest ${saved.max.toFixed(2)} g`
+      );
+    }
   }
 
   // Scores every saved recording against the current thresholds. Edit
@@ -75,10 +107,7 @@ export default function SensorDebugScreen() {
   }
 
   async function stopRecording() {
-    const saved = await csv.stop();
-    setRecording(false);
-    setFiles(csv.list());
-    if (saved) Alert.alert('Saved', `${saved.name}\n${saved.rows} samples`);
+    showSaved(await csv.stop());
   }
 
   const a = data.accel;
@@ -133,10 +162,27 @@ export default function SensorDebugScreen() {
             Label each recording honestly. Phase 3 replays these to tune the
             detector, so a mislabelled file quietly corrupts the results.
           </Text>
-          {recording ? (
+          {recording && waiting ? (
+            <>
+              <Text style={styles.waiting}>Waiting for movement…</Text>
+              <Text style={type.body}>
+                Nothing is saved while the phone is still. Drop it when ready:
+                recording starts on its own, keeps the second before, and saves
+                after {RECORDING.AFTER_MS / 1000} seconds. Leave it lying still after it lands.
+              </Text>
+              <Button title="Cancel" ghost onPress={cancelRecording} />
+            </>
+          ) : recording ? (
             <>
               <Text style={styles.recording}>Recording — {rows} samples</Text>
+              {range && (
+                <Reading
+                  name="lowest / highest"
+                  value={`${range.min.toFixed(2)} g / ${range.max.toFixed(2)} g`}
+                />
+              )}
               <Button title="Stop and save" onPress={stopRecording} />
+              <Button title="Cancel" ghost onPress={cancelRecording} />
             </>
           ) : (
             <>
@@ -235,6 +281,7 @@ const styles = StyleSheet.create({
   between: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   name: { color: colors.text, fontSize: 14 },
   recording: { color: colors.alarm, fontSize: 16, fontWeight: '700' },
+  waiting: { color: colors.warn, fontSize: 16, fontWeight: '700' },
   state: { fontSize: 22, fontWeight: '700', color: colors.safe },
   fileRow: {
     flexDirection: 'row',
