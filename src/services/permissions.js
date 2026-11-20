@@ -42,14 +42,6 @@ export const PERMISSIONS = [
     name: 'android.permission.ACTIVITY_RECOGNITION',
     minSdk: 29,
   },
-  {
-    id: 'backgroundLocation',
-    label: 'Background location',
-    why: 'A fall happens with the phone in your pocket, screen off. Android calls this "Allow all the time". It has to be set in Settings.',
-    name: 'android.permission.ACCESS_BACKGROUND_LOCATION',
-    minSdk: 29,
-    viaSettings: true,
-  },
 ];
 
 // Permissions that do not exist on this Android version are skipped.

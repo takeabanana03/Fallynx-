@@ -3,18 +3,10 @@ import * as phoneCall from './phoneCall';
 import * as sms from './sms';
 import * as cloudAlert from './cloudAlert';
 import * as localStore from '../storage/localStore';
+import * as history from '../supabase/history';
 import { alertSms } from './messageTemplates';
 import { dialTarget, TEST_MODE, TEST_NUMBER, USE_SIM } from '../../config/emergency';
 
-// The single path from "something happened" to "someone knows".
-//
-// Order is deliberate. Steps 2 and 3 work with no data connection; step 4
-// does not. In a cane field with one bar of signal the call and the message
-// are what actually reach help, so nothing that could block on the network
-// runs before them.
-//
-// A phone with no SIM card (USE_SIM = false) does steps 2 and 3 through
-// Twilio instead, over Wi-Fi or mobile data.
 
 export const STEP = {
   LOCATION: 'location',
@@ -69,12 +61,12 @@ export async function dispatch(event) {
     }
   }
 
-  // 4. Phase 5 writes the alert to Firestore here and the cloud function
-  //    pushes it to watchers. Until then the local record is enough.
   steps[STEP.CLOUD] = 'phase 5';
 
+  
   lastResult = { at: Date.now(), source: event.source, location: fix, steps };
-  await saveToHistory(lastResult);
+  const uploaded = await history.save(lastResult);
+  steps[STEP.CLOUD] = uploaded ? 'saved' : 'saved on phone, uploads later';
   return lastResult;
 }
 
@@ -102,7 +94,4 @@ async function recipients() {
   return localStore.read('contacts', []);
 }
 
-async function saveToHistory(entry) {
-  const history = await localStore.read('history', []);
-  await localStore.write('history', [entry, ...history].slice(0, 50));
-}
+

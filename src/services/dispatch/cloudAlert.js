@@ -1,15 +1,5 @@
 import { TWILIO } from '../../config/emergency';
 
-// Sends the alert straight to Twilio over Wi-Fi or mobile data: an SMS to
-// every number and a phone call to the first one. This is the path for a
-// phone with no SIM card. No server in between.
-//
-// Demo setup: the Twilio key lives inside the app (config/emergency.js),
-// so delete that key in the Twilio Console after the demo.
-//
-// Returns { sms, call } and never throws: a failed alert must not freeze
-// the countdown screen. Twilio's error text is shown in the Metro terminal.
-
 const API = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO.ACCOUNT_SID}`;
 const TIMEOUT_MS = 15000;
 

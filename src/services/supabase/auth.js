@@ -45,6 +45,7 @@ export async function logOut() {
   }
   await localStore.remove('contacts');
   await localStore.remove('medicalId');
+  await localStore.remove('history');
 }
 
 // Calls back with the user on log in and null on log out. Only these two

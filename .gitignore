@@ -8,18 +8,9 @@ dist/
 android/
 ios/
 
-# Secrets
 .env
-google-services.json
-firebase/functions/node_modules/
-firebase/.firebaserc
 
-# Sensor recordings from Phase 2
 recordings/
 *.csv
-recordings/
-!recordings/*.csvs
 
 .claude/
-
-src/config/emergency.js
