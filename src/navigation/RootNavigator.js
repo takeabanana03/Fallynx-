@@ -14,8 +14,10 @@ import MedicalIdScreen from '../screens/MedicalIdScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import CountdownScreen from '../screens/CountdownScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
+import LoginScreen from '../screens/LoginScreen';
 
 import * as Perms from '../services/permissions';
+import * as auth from '../services/supabase/auth';
 import { subscribe } from '../services/triggers/triggerBus';
 import { navigationRef, navigate } from './navigationRef';
 import { colors } from '../theme';
@@ -67,19 +69,30 @@ function Tabs() {
 
 export default function RootNavigator() {
   const [onboarded, setOnboarded] = useState(null);
+  const [user, setUser] = useState(undefined); // undefined = still checking
 
   useEffect(() => {
     Perms.hasOnboarded().then(setOnboarded);
   }, []);
 
+  // A remembered login opens straight into the app, even offline.
+  useEffect(() => {
+    auth.currentUser().then(setUser);
+    return auth.onChange(setUser);
+  }, []);
+
   useEffect(() => subscribe((event) => navigate('Countdown', { event })), []);
 
-  if (onboarded === null) {
+  if (onboarded === null || user === undefined) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator color={colors.safe} />
       </View>
     );
+  }
+
+  if (!user) {
+    return <LoginScreen onLoggedIn={setUser} />;
   }
 
   if (!onboarded) {

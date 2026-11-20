@@ -5,13 +5,16 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Card, Label, Button, Dot } from '../components/ui';
 import { colors, space, type } from '../theme';
 import * as Perms from '../services/permissions';
+import * as auth from '../services/supabase/auth';
 import { EMERGENCY_NUMBERS, TEST_MODE, dialTarget } from '../config/emergency';
 
 export default function SettingsScreen({ navigation }) {
   const [statuses, setStatuses] = useState({});
+  const [email, setEmail] = useState('');
 
   const refresh = useCallback(() => {
     Perms.checkAll().then(setStatuses);
+    auth.currentUser().then((u) => setEmail(u?.email || ''));
   }, []);
 
   useFocusEffect(refresh);
@@ -19,6 +22,14 @@ export default function SettingsScreen({ navigation }) {
   async function grant(p) {
     await Perms.request(p);
     refresh();
+  }
+
+  // The app returns to the login screen on its own (see RootNavigator).
+  function logOut() {
+    Alert.alert('Log out?', 'You will need your email and password to log back in.', [
+      { text: 'Cancel' },
+      { text: 'Log out', style: 'destructive', onPress: () => auth.logOut() },
+    ]);
   }
 
   function reset() {
@@ -65,13 +76,18 @@ export default function SettingsScreen({ navigation }) {
         </Card>
 
         <Card>
+          <Label>Account</Label>
+          <Text style={type.body}>{email ? `Logged in as ${email}` : 'Logged in'}</Text>
+          <Button title="Log out" ghost onPress={logOut} />
+        </Card>
+
+        <Card>
           <Label>More</Label>
           <Button title="Medical ID" ghost onPress={() => navigation.navigate('Medical ID')} />
           <Button title="Alert history" ghost onPress={() => navigation.navigate('History')} />
           <Button title="Battery optimisation" ghost onPress={Perms.openBatterySettings} />
           <Button title="Android app settings" ghost onPress={Perms.openSettings} />
           <Button title="Run setup again" ghost onPress={reset} />
-          
         </Card>
       </ScrollView>
     </SafeAreaView>

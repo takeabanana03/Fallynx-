@@ -3,7 +3,7 @@ import { View, Text, TextInput, ScrollView, StyleSheet, Alert } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, Label, Button } from '../components/ui';
 import { colors, space, type } from '../theme';
-import * as contacts from '../services/firebase/contacts';
+import * as contacts from '../services/supabase/contacts';
 
 const FIELDS = [
   { key: 'bloodGroup', label: 'Blood group', placeholder: 'O+' },

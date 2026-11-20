@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Card, Label, Button, Dot } from '../components/ui';
 import { colors, space, type } from '../theme';
-import * as contacts from '../services/firebase/contacts';
+import * as contacts from '../services/supabase/contacts';
 import { ALERT } from '../config/thresholds';
 
 export default function ContactsScreen({ navigation }) {

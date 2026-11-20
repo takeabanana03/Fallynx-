@@ -2,7 +2,6 @@ import { PermissionsAndroid, Platform, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Every permission Fallynx needs, in the order Android will grant them.
-// minSdk: the Android version the permission first exists in.
 // critical: without it, Fallynx cannot raise an alert at all.
 export const PERMISSIONS = [
   {

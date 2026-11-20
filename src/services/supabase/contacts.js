@@ -1,32 +1,31 @@
-import {
-  collection, doc, setDoc, deleteDoc, getDocs, getDoc, query, orderBy,
-} from 'firebase/firestore';
-import { db, ready } from './client';
+import { supabase } from './client';
 import * as localStore from '../storage/localStore';
 import { ALERT } from '../../config/thresholds';
 
-// Contacts and the medical ID. Written to Firestore and mirrored into
+// Contacts and the medical ID. Written to Supabase and mirrored into
 // AsyncStorage on every change.
 //
 // The mirror is not an optimisation. The moment these details matter is the
 // moment someone is on the ground, possibly with no signal. A read must
-// never depend on the network, so Firestore is tried first and the cached
+// never depend on the network, so Supabase is tried first and the cached
 // copy answers whenever it fails.
 
 async function uid() {
-  const user = await ready();
-  return user.uid;
+  const { data } = await supabase.auth.getSession();
+  if (!data.session) throw new Error('Not logged in');
+  return data.session.user.id;
 }
 
 export async function list() {
   try {
-    const id = await uid();
-    const snap = await getDocs(
-      query(collection(db, 'users', id, 'contacts'), orderBy('priority'))
-    );
-    const contacts = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    await localStore.write('contacts', contacts);
-    return contacts;
+    await uid();
+    const { data, error } = await supabase
+      .from('contacts')
+      .select('id, name, phone, relationship, priority')
+      .order('priority');
+    if (error) throw error;
+    await localStore.write('contacts', data);
+    return data;
   } catch (e) {
     return localStore.read('contacts', []);
   }
@@ -51,12 +50,13 @@ export async function add({ name, phone, relationship }) {
   await localStore.write('contacts', updated);
 
   try {
-    const id = await uid();
-    const { id: _, ...data } = contact;
-    await setDoc(doc(db, 'users', id, 'contacts', contact.id), data);
+    const { error } = await supabase
+      .from('contacts')
+      .upsert({ ...contact, user_id: await uid() });
+    if (error) throw error;
   } catch (e) {
-    // Saved on the device. It will not reach Firestore until the next
-    // successful write, which is an acceptable trade for working offline.
+    // Saved on the device. It reaches Supabase on the next successful write,
+    // which is an acceptable trade for working offline.
   }
 
   return updated;
@@ -69,10 +69,12 @@ export async function remove(contactId) {
   await localStore.write('contacts', updated);
 
   try {
-    const id = await uid();
-    await deleteDoc(doc(db, 'users', id, 'contacts', contactId));
+    await uid();
+    // Row Level Security limits this to the logged-in user's own rows.
+    const { error } = await supabase.from('contacts').delete().eq('id', contactId);
+    if (error) throw error;
   } catch (e) {
-    // Removed locally; Firestore copy is cleaned up on the next sync.
+    // Removed locally; the Supabase copy is cleaned up on the next sync.
   }
 
   return updated;
@@ -81,8 +83,10 @@ export async function remove(contactId) {
 export async function saveMedicalId(medical) {
   await localStore.write('medicalId', medical);
   try {
-    const id = await uid();
-    await setDoc(doc(db, 'users', id), { medicalId: medical }, { merge: true });
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({ id: await uid(), medical_id: medical, updated_at: new Date().toISOString() });
+    if (error) throw error;
   } catch (e) {
     // Kept on the device, which is where it is actually read from.
   }
@@ -91,11 +95,15 @@ export async function saveMedicalId(medical) {
 export async function readMedicalId() {
   try {
     const id = await uid();
-    const snap = await getDoc(doc(db, 'users', id));
-    const medical = snap.data()?.medicalId;
-    if (medical) {
-      await localStore.write('medicalId', medical);
-      return medical;
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('medical_id')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw error;
+    if (data?.medical_id) {
+      await localStore.write('medicalId', data.medical_id);
+      return data.medical_id;
     }
   } catch (e) {
     // Fall through.
